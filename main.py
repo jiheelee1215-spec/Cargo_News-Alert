@@ -49,7 +49,13 @@ for entry in feed.entries[:5]:
                 messages=[
                     {
                         "role": "system",
-                        "content": "Summarize this news article in 3 short bullet points."
+                        "content": """
+                        이 뉴스 기사를 한국어로 3줄로 짧게 요약해줘.
+                        조건 :
+                        - 핵심만 3줄
+                        - 쉬운 한국어
+                        - 불필요한 설명 금지
+                        """
                     },
                     {
                         "role": "user",
