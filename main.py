@@ -6,11 +6,10 @@ from newspaper import Article
 from groq import Groq
 
 KEYWORDS = [
-    "Eng Kong",
-    "Navis",
-    "EngKong",
-    "EKH",
-    "永康"
+    "Nvidia",
+    "AI",
+    "Samsung",
+    "Hynix"
 ]
 
 RSS_URL = "https://news.google.com/rss/search?q=AI&hl=en-US&gl=US&ceid=US:en"
