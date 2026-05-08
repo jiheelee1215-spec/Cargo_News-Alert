@@ -1,6 +1,8 @@
 name: News Alert
 
 on:
+  workflow_dispatch:
+
   schedule:
     - cron: '0 * * * *'
 
