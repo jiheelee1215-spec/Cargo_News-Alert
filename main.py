@@ -6,8 +6,9 @@ from newspaper import Article
 from groq import Groq
 
 KEYWORDS = [
+    "Nvidia",
+    "Samsung",
     "Eng Kong",
-    "EngKong",
     "EKH",
     "Navis Capital",
     "永康"
@@ -33,7 +34,7 @@ for entry in feed.entries[:5]:
 
     title = entry.title
 
-    if any(keyword.lower() in title.lower() for keyword in KEYWORDS):
+        if any(keyword.lower() in (title.lower() + article.text.lower()) for keyword in KEYWORDS):
 
         try:
 
