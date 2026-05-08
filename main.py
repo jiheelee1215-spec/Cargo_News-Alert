@@ -2,9 +2,13 @@ import feedparser
 import requests
 import os
 
-KEYWORDS = ["AI","인공지능","챗GPT","삼성전자","하이닉스"]
+KEYWORDS = [
+    "AI",
+    "OpenAI",
+    "NVIDIA"
+]
 
-RSS_URL = "https://news.google.com/rss?hl=ko&gl=KR&ceid=KR:ko"
+RSS_URL = "https://news.google.com/rss/search?q=AI&hl=en-US&gl=US&ceid=US:en"
 
 TELEGRAM_TOKEN = os.environ["TELEGRAM_TOKEN"]
 TELEGRAM_CHAT_ID = os.environ["TELEGRAM_CHAT_ID"]
@@ -15,13 +19,13 @@ url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
 
 sent = False
 
-for entry in feed.entries[:10]:
+for entry in feed.entries[:20]:
 
     title = entry.title
 
     if any(keyword.lower() in title.lower() for keyword in KEYWORDS):
 
-        message = entry.link
+        message = f"📰 {title}\n{entry.link}"
 
         requests.post(
             url,
@@ -34,6 +38,6 @@ for entry in feed.entries[:10]:
         sent = True
 
 if sent:
-    print("링크 전송 완료")
+    print("글로벌 뉴스 전송 완료")
 else:
     print("키워드 뉴스 없음")
