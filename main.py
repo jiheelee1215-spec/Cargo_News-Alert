@@ -23,18 +23,22 @@ for entry in feed.entries:
             f"📰 {title}\n{entry.link}"
         )
 
-message = "테스트 메시지"
+if found_articles:
 
-url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
+    message = "\n\n".join(found_articles)
 
-requests.post(
-    url,
-    data={
-        "chat_id": TELEGRAM_CHAT_ID,
-        "text": message
-    }
-)
+    url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
 
-print("텔레그램 전송 완료")
+    requests.post(
+        url,
+        data={
+            "chat_id": TELEGRAM_CHAT_ID,
+            "text": message
+        }
+    )
 
+    print("텔레그램 전송 완료")
+
+else:
+    print("조건에 맞는 뉴스 없음")
  
