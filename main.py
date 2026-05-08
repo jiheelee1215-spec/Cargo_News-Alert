@@ -2,42 +2,74 @@ import feedparser
 import requests
 import os
 
+from newspaper import Article
+from openai import OpenAI
+
 KEYWORDS = [
-    "AI",
     "OpenAI",
-    "NVIDIA"
+    "NVIDIA",
+    "Anthropic"
 ]
 
 RSS_URL = "https://news.google.com/rss/search?q=AI&hl=en-US&gl=US&ceid=US:en"
 
 TELEGRAM_TOKEN = os.environ["TELEGRAM_TOKEN"]
 TELEGRAM_CHAT_ID = os.environ["TELEGRAM_CHAT_ID"]
+OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
+
+client = OpenAI(api_key=OPENAI_API_KEY)
 
 feed = feedparser.parse(RSS_URL)
 
 url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
 
-sent = False
-
-for entry in feed.entries[:20]:
+for entry in feed.entries[:3]:
 
     title = entry.title
 
     if any(keyword.lower() in title.lower() for keyword in KEYWORDS):
 
-        message = f"📰 {title}\n{entry.link}"
+        try:
 
-        requests.post(
-            url,
-            data={
-                "chat_id": TELEGRAM_CHAT_ID,
-                "text": message
-            }
-        )
+            article = Article(entry.link)
+            article.download()
+            article.parse()
 
-        sent = True
+            text = article.text[:4000]
 
-if sent:
-    print("글로벌 뉴스 전송 완료")
-else:
-    print("키워드 뉴스 없음")
+            response = client.chat.completions.create(
+                model="gpt-4.1-mini",
+                messages=[
+                    {
+                        "role": "system",
+                        "content": "Summarize this news article in 3 short bullet points."
+                    },
+                    {
+                        "role": "user",
+                        "content": text
+                    }
+                ]
+            )
+
+            summary = response.choices[0].message.content
+
+            message = f"""
+📰 {title}
+
+{summary}
+
+🔗 {entry.link}
+"""
+
+            requests.post(
+                url,
+                data={
+                    "chat_id": TELEGRAM_CHAT_ID,
+                    "text": message
+                }
+            )
+
+            print(f"전송 완료: {title}")
+
+        except Exception as e:
+            print(e)
