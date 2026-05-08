@@ -36,11 +36,13 @@ for entry in feed.entries[:5]:
 
         try:
 
-            article = Article(entry.link)
-            article.download()
-            article.parse()
-
-            text = article.text[:3000]
+            text = f"""
+            Title:
+            {entry.title}
+            
+            Description:
+            {entry.summary}
+            """
 
             response = client.chat.completions.create(
                 model="llama-3.1-8b-instant",
