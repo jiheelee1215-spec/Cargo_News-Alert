@@ -2,7 +2,7 @@ import feedparser
 import requests
 import os
 
-KEYWORDS = ["AI"]
+KEYWORDS = ["AI","인공지능","챗GPT","삼성전자","하이닉스"]
 
 RSS_URL = "https://news.google.com/rss?hl=ko&gl=KR&ceid=KR:ko"
 
