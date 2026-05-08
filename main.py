@@ -9,7 +9,7 @@ KEYWORDS = [
     "Eng Kong",
     "EngKong",
     "EKH",
-    "Navis",
+    "Navis Capital",
     "永康"
 ]
 
