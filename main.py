@@ -6,11 +6,6 @@ from groq import Groq
 
 # ✅ 키워드 목록
 KEYWORDS = [
-    "Nvidia",
-    "엔비디아",
-    "삼성",
-    "AI",
-    "Samsung",
     "Eng Kong",
     "EKH",
     "Navis Capital",
