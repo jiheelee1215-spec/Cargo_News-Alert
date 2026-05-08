@@ -3,27 +3,32 @@ import requests
 import os
 
 from newspaper import Article
-from openai import OpenAI
+from groq import Groq
 
 KEYWORDS = [
     "OpenAI",
     "NVIDIA",
-    "Anthropic"
+    "Anthropic",
+    "ChatGPT"
 ]
 
 RSS_URL = "https://news.google.com/rss/search?q=AI&hl=en-US&gl=US&ceid=US:en"
 
 TELEGRAM_TOKEN = os.environ["TELEGRAM_TOKEN"]
 TELEGRAM_CHAT_ID = os.environ["TELEGRAM_CHAT_ID"]
-OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
+GROQ_API_KEY = os.environ["GROQ_API_KEY"]
 
-client = OpenAI(api_key=OPENAI_API_KEY)
+client = Groq(
+    api_key=GROQ_API_KEY
+)
 
 feed = feedparser.parse(RSS_URL)
 
-url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
+telegram_url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
 
-for entry in feed.entries[:3]:
+sent = False
+
+for entry in feed.entries[:5]:
 
     title = entry.title
 
@@ -35,10 +40,10 @@ for entry in feed.entries[:3]:
             article.download()
             article.parse()
 
-            text = article.text[:4000]
+            text = article.text[:3000]
 
             response = client.chat.completions.create(
-                model="gpt-4.1-mini",
+                model="llama-3.1-8b-instant",
                 messages=[
                     {
                         "role": "system",
@@ -62,7 +67,7 @@ for entry in feed.entries[:3]:
 """
 
             requests.post(
-                url,
+                telegram_url,
                 data={
                     "chat_id": TELEGRAM_CHAT_ID,
                     "text": message
@@ -71,5 +76,11 @@ for entry in feed.entries[:3]:
 
             print(f"전송 완료: {title}")
 
+            sent = True
+
         except Exception as e:
-            print(e)
+            print("에러 발생:")
+            print(str(e))
+
+if not sent:
+    print("키워드 뉴스 없음")
