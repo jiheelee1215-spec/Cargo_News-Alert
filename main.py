@@ -38,6 +38,3 @@ requests.post(
 print("텔레그램 전송 완료")
 
  
-
-else:
-    print("조건에 맞는 뉴스 없음")
