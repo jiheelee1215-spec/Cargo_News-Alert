@@ -18,7 +18,8 @@ RSS_SOURCES = {
     "🇰🇷 한국": "https://news.google.com/rss/search?q=AI&hl=ko&gl=KR&ceid=KR:ko",
     "🇸🇬 싱가포르": "https://news.google.com/rss/search?q=AI&hl=en-SG&gl=SG&ceid=SG:en",
     "🇨🇳 중국": "https://news.google.com/rss/search?q=AI&hl=zh-CN&gl=CN&ceid=CN:zh-Hans"
-}
+    "🇲🇾 말레이시아": "https://news.google.com/rss/search?q=AI&hl=en-MY&gl=MY&ceid=MY:en"
+    }
 
 # ✅ 환경 변수
 TELEGRAM_TOKEN = os.environ["TELEGRAM_TOKEN"]
