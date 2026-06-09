@@ -1,6 +1,8 @@
 import feedparser
 import requests
 import os
+import urllib.parse
+from bs4 import BeautifulSoup
 from newspaper import Article
 from groq import Groq
 
@@ -12,8 +14,7 @@ KEYWORDS = [
     "永康"
 ]
 
-
-# ✅ 국가별 구글 뉴스 RSS URL (검색어 없이 기본 구조만 유지)
+# ✅ 국가별 RSS (검색어 없이)
 RSS_SOURCES = {
     "🇺🇸 미국": "https://news.google.com/rss/search?hl=en-US&gl=US&ceid=US:en",
     "🇰🇷 한국": "https://news.google.com/rss/search?hl=ko&gl=KR&ceid=KR:ko",
@@ -31,20 +32,20 @@ client = Groq(api_key=GROQ_API_KEY)
 telegram_url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
 
 sent = False
-# ✅ 국가별 + 키워드별 RSS 피드 순회
+
+# ✅ 국가별 + 키워드별 RSS 순회
 for country, base_rss_url in RSS_SOURCES.items():
     for keyword in KEYWORDS:
-        # 🔹 검색어를 URL에 직접 추가
         encoded_keyword = urllib.parse.quote(keyword)
         rss_url = f"{base_rss_url}&q={encoded_keyword}"
 
         feed = feedparser.parse(rss_url)
         print(f"📡 {country} ({keyword}) 뉴스 {len(feed.entries)}개 확인 중...")
 
-        for entry in feed.entries[:5]:  # 각 키워드당 최대 5개 기사
+        for entry in feed.entries[:5]:
             title = entry.title
 
-           try:
+            try:
                 # 기본 newspaper3k 시도
                 article = Article(entry.link)
                 article.download()
@@ -59,7 +60,7 @@ for country, base_rss_url in RSS_SOURCES.items():
                     content = " ".join(p.get_text() for p in paragraphs if p.get_text())
 
                 # ✅ 키워드 포함 여부 확인
-                if any(k.lower() in (title.lower() + article.text.lower()) for k in KEYWORDS):
+                if any(k.lower() in (title.lower() + content.lower()) for k in KEYWORDS):
                     text = f"""
                     Title:
                     {entry.title}
@@ -68,10 +69,10 @@ for country, base_rss_url in RSS_SOURCES.items():
                     {entry.summary}
 
                     Content:
-                    {article.text[:3000]}
+                    {content[:3000]}
                     """
 
-                    # ✅ Groq API로 한국어 3줄 요약 요청
+                    # ✅ Groq 요약 요청
                     response = client.chat.completions.create(
                         model="llama-3.1-8b-instant",
                         messages=[
@@ -94,30 +95,30 @@ for country, base_rss_url in RSS_SOURCES.items():
 
                     summary = response.choices[0].message.content.strip()
 
-
-                # ✅ 텔레그램 메시지 포맷
-                message = f"""
+                    # ✅ 텔레그램 메시지
+                    message = f"""
 📰 {title}
 
 {summary}
 
 🌏 출처: {country} 뉴스
+🔍 키워드: {keyword}
 🔗 {entry.link}
 """
 
-                requests.post(
-                    telegram_url,
-                    data={
-                        "chat_id": TELEGRAM_CHAT_ID,
-                        "text": message
-                    }
-                )
+                    requests.post(
+                        telegram_url,
+                        data={
+                            "chat_id": TELEGRAM_CHAT_ID,
+                            "text": message
+                        }
+                    )
 
-                print(f"✅ 전송 완료: {country} | {title}")
-                sent = True
+                    print(f"✅ 전송 완료: {country} | {keyword} | {title}")
+                    sent = True
 
-        except Exception as e:
-            print(f"❌ {country} 뉴스 처리 중 에러:", str(e))
+            except Exception as e:
+                print(f"❌ {country} | {keyword} 뉴스 처리 중 에러:", str(e))
 
 if not sent:
-    print("🔍 키워드 뉴스 없음")
+    print("🔍 키워드 관련 뉴스 없음")
