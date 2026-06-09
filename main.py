@@ -5,6 +5,8 @@ import urllib.parse
 from bs4 import BeautifulSoup
 from newspaper import Article
 from groq import Groq
+import time
+from datetime import datetime, timedelta
 
 # ✅ 키워드 목록
 KEYWORDS = [
@@ -14,7 +16,7 @@ KEYWORDS = [
     "永康"
 ]
 
-# ✅ 국가별 RSS (검색어 없이)
+# ✅ 국가별 구글 뉴스 RSS URL (검색어 없이)
 RSS_SOURCES = {
     "🇺🇸 미국": "https://news.google.com/rss/search?hl=en-US&gl=US&ceid=US:en",
     "🇰🇷 한국": "https://news.google.com/rss/search?hl=ko&gl=KR&ceid=KR:ko",
@@ -31,6 +33,10 @@ GROQ_API_KEY = os.environ["GROQ_API_KEY"]
 client = Groq(api_key=GROQ_API_KEY)
 telegram_url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
 
+# ✅ 최근 24시간 내 기사만 알림
+NOW = datetime.utcnow()
+TIME_LIMIT = NOW - timedelta(hours=24)
+
 sent = False
 
 # ✅ 국가별 + 키워드별 RSS 순회
@@ -45,21 +51,31 @@ for country, base_rss_url in RSS_SOURCES.items():
         for entry in feed.entries[:5]:
             title = entry.title
 
+            # ✅ 발행 시각 확인 (24시간 이내만)
+            if hasattr(entry, "published_parsed"):
+                published_time = datetime.fromtimestamp(time.mktime(entry.published_parsed))
+                if published_time < TIME_LIMIT:
+                    print(f"⏩ 오래된 기사 건너뜀: {title} ({published_time})")
+                    continue
+            else:
+                print(f"⚠️ 발행 시각 정보 없음, 스킵: {title}")
+                continue
+
             try:
-                # 기본 newspaper3k 시도
+                # ✅ 1차: newspaper3k 파싱
                 article = Article(entry.link)
                 article.download()
                 article.parse()
                 content = article.text.strip()
 
-                # ✅ 본문이 너무 짧거나 비어 있으면 BeautifulSoup로 보완
+                # ✅ 2차: 본문이 짧으면 BeautifulSoup 보완
                 if len(content) < 300:
                     resp = requests.get(entry.link, headers={"User-Agent": "Mozilla/5.0"})
                     soup = BeautifulSoup(resp.text, "html.parser")
                     paragraphs = soup.find_all("p")
                     content = " ".join(p.get_text() for p in paragraphs if p.get_text())
 
-                # ✅ 키워드 포함 여부 확인
+                # ✅ 키워드 포함 기사만 처리
                 if any(k.lower() in (title.lower() + content.lower()) for k in KEYWORDS):
                     text = f"""
                     Title:
@@ -72,7 +88,7 @@ for country, base_rss_url in RSS_SOURCES.items():
                     {content[:3000]}
                     """
 
-                    # ✅ Groq 요약 요청
+                    # ✅ Groq API로 한국어 3줄 요약
                     response = client.chat.completions.create(
                         model="llama-3.1-8b-instant",
                         messages=[
@@ -95,7 +111,7 @@ for country, base_rss_url in RSS_SOURCES.items():
 
                     summary = response.choices[0].message.content.strip()
 
-                    # ✅ 텔레그램 메시지
+                    # ✅ 텔레그램 메시지 포맷
                     message = f"""
 📰 {title}
 
@@ -106,6 +122,7 @@ for country, base_rss_url in RSS_SOURCES.items():
 🔗 {entry.link}
 """
 
+                    # ✅ 텔레그램 전송
                     requests.post(
                         telegram_url,
                         data={
@@ -121,4 +138,5 @@ for country, base_rss_url in RSS_SOURCES.items():
                 print(f"❌ {country} | {keyword} 뉴스 처리 중 에러:", str(e))
 
 if not sent:
-    print("🔍 키워드 관련 뉴스 없음")
+    print("🔍 최근 24시간 내 키워드 관련 뉴스 없음")
+
