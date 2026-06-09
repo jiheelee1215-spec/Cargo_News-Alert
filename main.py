@@ -12,14 +12,15 @@ KEYWORDS = [
     "永康"
 ]
 
-# ✅ 국가별 구글 뉴스 RSS URL
+
+# ✅ 국가별 구글 뉴스 RSS URL (검색어 없이 기본 구조만 유지)
 RSS_SOURCES = {
-    "🇺🇸 미국": "https://news.google.com/rss/search?q=AI&hl=en-US&gl=US&ceid=US:en",
-    "🇰🇷 한국": "https://news.google.com/rss/search?q=AI&hl=ko&gl=KR&ceid=KR:ko",
-    "🇸🇬 싱가포르": "https://news.google.com/rss/search?q=AI&hl=en-SG&gl=SG&ceid=SG:en",
-    "🇨🇳 중국": "https://news.google.com/rss/search?q=AI&hl=zh-CN&gl=CN&ceid=CN:zh-Hans",
-    "🇲🇾 말레이시아": "https://news.google.com/rss/search?q=AI&hl=en-MY&gl=MY&ceid=MY:en"
-    }
+    "🇺🇸 미국": "https://news.google.com/rss/search?hl=en-US&gl=US&ceid=US:en",
+    "🇰🇷 한국": "https://news.google.com/rss/search?hl=ko&gl=KR&ceid=KR:ko",
+    "🇸🇬 싱가포르": "https://news.google.com/rss/search?hl=en-SG&gl=SG&ceid=SG:en",
+    "🇨🇳 중국": "https://news.google.com/rss/search?hl=zh-CN&gl=CN&ceid=CN:zh-Hans",
+    "🇲🇾 말레이시아": "https://news.google.com/rss/search?hl=en-MY&gl=MY&ceid=MY:en"
+}
 
 # ✅ 환경 변수
 TELEGRAM_TOKEN = os.environ["TELEGRAM_TOKEN"]
@@ -30,55 +31,69 @@ client = Groq(api_key=GROQ_API_KEY)
 telegram_url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
 
 sent = False
+# ✅ 국가별 + 키워드별 RSS 피드 순회
+for country, base_rss_url in RSS_SOURCES.items():
+    for keyword in KEYWORDS:
+        # 🔹 검색어를 URL에 직접 추가
+        encoded_keyword = urllib.parse.quote(keyword)
+        rss_url = f"{base_rss_url}&q={encoded_keyword}"
 
-# ✅ 각 국가별 뉴스 피드 순회
-for country, rss_url in RSS_SOURCES.items():
-    feed = feedparser.parse(rss_url)
-    print(f"📡 {country} 뉴스 {len(feed.entries)}개 확인 중...")
+        feed = feedparser.parse(rss_url)
+        print(f"📡 {country} ({keyword}) 뉴스 {len(feed.entries)}개 확인 중...")
 
-    for entry in feed.entries[:5]:  # 각 나라당 최대 5개 기사
-        title = entry.title
+        for entry in feed.entries[:5]:  # 각 키워드당 최대 5개 기사
+            title = entry.title
 
-        try:
-            article = Article(entry.link)
-            article.download()
-            article.parse()
+           try:
+                # 기본 newspaper3k 시도
+                article = Article(entry.link)
+                article.download()
+                article.parse()
+                content = article.text.strip()
 
-            # ✅ 키워드 포함 여부 확인
-            if any(keyword.lower() in (title.lower() + article.text.lower()) for keyword in KEYWORDS):
-                text = f"""
-                Title:
-                {entry.title}
+                # ✅ 본문이 너무 짧거나 비어 있으면 BeautifulSoup로 보완
+                if len(content) < 300:
+                    resp = requests.get(entry.link, headers={"User-Agent": "Mozilla/5.0"})
+                    soup = BeautifulSoup(resp.text, "html.parser")
+                    paragraphs = soup.find_all("p")
+                    content = " ".join(p.get_text() for p in paragraphs if p.get_text())
 
-                Description:
-                {entry.summary}
+                # ✅ 키워드 포함 여부 확인
+                if any(k.lower() in (title.lower() + article.text.lower()) for k in KEYWORDS):
+                    text = f"""
+                    Title:
+                    {entry.title}
 
-                Content:
-                {article.text[:3000]}
-                """
+                    Description:
+                    {entry.summary}
 
-                # ✅ 요약 요청 (한국어 3줄)
-                response = client.chat.completions.create(
-                    model="llama-3.1-8b-instant",
-                    messages=[
-                        {
-                            "role": "system",
-                            "content": """
-                            이 뉴스 기사를 한국어로 3줄로 요약해줘.
-                            조건:
-                            - 핵심만 3줄
-                            - 쉬운 한국어
-                            - 불필요한 설명 금지
-                            """
-                        },
-                        {
-                            "role": "user",
-                            "content": text
-                        }
-                    ]
-                )
+                    Content:
+                    {article.text[:3000]}
+                    """
 
-                summary = response.choices[0].message.content.strip()
+                    # ✅ Groq API로 한국어 3줄 요약 요청
+                    response = client.chat.completions.create(
+                        model="llama-3.1-8b-instant",
+                        messages=[
+                            {
+                                "role": "system",
+                                "content": """
+                                이 뉴스 기사를 한국어로 3줄로 요약해줘.
+                                조건:
+                                - 핵심만 3줄
+                                - 쉬운 한국어
+                                - 불필요한 설명 금지
+                                """
+                            },
+                            {
+                                "role": "user",
+                                "content": text
+                            }
+                        ]
+                    )
+
+                    summary = response.choices[0].message.content.strip()
+
 
                 # ✅ 텔레그램 메시지 포맷
                 message = f"""
