@@ -14,6 +14,8 @@ KEYWORDS = [
     "EKH",
     "Navis Capital",
     "永康"
+    "Tianjin Keyun"
+    "天津科韵"
 ]
 
 # ✅ 국가별 구글 뉴스 RSS URL (검색어 없이)
