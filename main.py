@@ -8,13 +8,13 @@ from groq import Groq
 import time
 from datetime import datetime, timedelta
 
-# ✅ 키워드 목록
+# ✅ 키워드 목록 (콤마 누락 수정)
 KEYWORDS = [
     "Eng Kong",
     "EKH",
     "Navis Capital",
-    "永康"
-    "Tianjin Keyun"
+    "永康",
+    "Tianjin Keyun",
     "天津科韵"
 ]
 
@@ -41,6 +41,19 @@ TIME_LIMIT = NOW - timedelta(hours=24)
 
 sent = False
 
+# ✅ 중복 기사 방지용 파일
+HISTORY_FILE = "sent_links.txt"
+
+# ✅ 이전에 전송된 링크 불러오기
+if os.path.exists(HISTORY_FILE):
+    with open(HISTORY_FILE, "r") as f:
+        sent_links = set(f.read().splitlines())
+else:
+    sent_links = set()
+
+# ✅ 실행 중 중복 방지용
+seen_links = set()
+
 # ✅ 국가별 + 키워드별 RSS 순회
 for country, base_rss_url in RSS_SOURCES.items():
     for keyword in KEYWORDS:
@@ -52,6 +65,13 @@ for country, base_rss_url in RSS_SOURCES.items():
 
         for entry in feed.entries[:5]:
             title = entry.title
+            link = entry.link
+
+            # ✅ 중복 기사 필터링 (이전 실행 + 현재 실행)
+            if link in sent_links or link in seen_links:
+                print(f"⚠️ 중복 기사 건너뜀: {title}")
+                continue
+            seen_links.add(link)
 
             # ✅ 발행 시각 확인 (24시간 이내만)
             if hasattr(entry, "published_parsed"):
@@ -133,12 +153,18 @@ for country, base_rss_url in RSS_SOURCES.items():
                         }
                     )
 
+                    # ✅ 전송 완료 후 링크 저장
+                    sent_links.add(link)
+
                     print(f"✅ 전송 완료: {country} | {keyword} | {title}")
                     sent = True
 
             except Exception as e:
                 print(f"❌ {country} | {keyword} 뉴스 처리 중 에러:", str(e))
 
+# ✅ 실행 종료 후 전송된 링크 기록 저장
+with open(HISTORY_FILE, "w") as f:
+    f.write("\n".join(sent_links))
+
 if not sent:
     print("🔍 최근 24시간 내 키워드 관련 뉴스 없음")
-
