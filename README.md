@@ -1,4 +1,4 @@
-# Cargo AI News Alert
+# AI News Alert
 
 특정 키워드 관련 뉴스를 자동으로 수집·요약하여  
 텔레그램으로 실시간 알림을 제공하는 챗봇입니다.
