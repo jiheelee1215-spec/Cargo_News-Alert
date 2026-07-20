@@ -11,7 +11,8 @@ from datetime import datetime, timedelta
 # ✅ 키워드 목록 (콤마 누락 수정)
 KEYWORDS = [
     "Eng Kong",
-    "EKH",
+    "EKH Ltd",
+    "EKH Limited",
     "Navis Capital",
     "永康控股",
     "Tianjin Keyun",
