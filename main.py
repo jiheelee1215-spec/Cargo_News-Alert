@@ -13,7 +13,7 @@ KEYWORDS = [
     "Eng Kong",
     "EKH",
     "Navis Capital",
-    "永康",
+    "永康控股",
     "Tianjin Keyun",
     "天津科韵"
 ]
